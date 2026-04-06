@@ -85,14 +85,10 @@ export const refresh = (req, res) => {
 
 const genTokens = (email) => {
     return {
-                success: true,
-                rftoken: createRfToken({
-                    email
-                }),
-                authtoken: createAuthToken({
-                    email
-                })
-            }
+        success: true,
+        rftoken: createRfToken({email}),
+        authtoken: createAuthToken({email})
+    }
 }
 
 

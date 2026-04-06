@@ -1,7 +1,6 @@
 import express from "express";
 import env from "dotenv";
 import cors from "cors";
-
 import userRouter from "./modules/user/user.routes.js"
 
 env.config();
@@ -13,7 +12,7 @@ app.use("/uploads", express.static("uploads"));
 
 app.use("/api/user", userRouter);
 
-app.listen(process.env.APP_Port,()=>{
+app.listen(process.env.APP_Port || 3000,()=>{
     console.log("Server up and running on port " + process.env.APP_Port);
 });
 
