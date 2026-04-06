@@ -12,7 +12,7 @@ export const userSignUp = async (req, res) =>{
         if(result){
             res.status(201).json({
             success: true,
-            message: "user added"
+            message: "user added success"
         });
         }else{
             res.json({

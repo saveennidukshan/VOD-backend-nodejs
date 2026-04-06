@@ -7,4 +7,13 @@ const db = mysql.createPool({
     database: process.env.DB_NAME,
 })
 
+db.getConnection((err, connection) => {
+    if(err){
+        console.log("Database Connection Failed");
+    }else{
+        console.log("Database Connection Success");
+        connection.release();
+    }
+})
+
 export default db.promise();
