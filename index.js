@@ -2,6 +2,7 @@ import express from "express";
 import env from "dotenv";
 import cors from "cors";
 import userRouter from "./modules/user/user.routes.js"
+import channelRouter from "./modules/channel/channel.routes.js"
 import compression from "compression";
 
 env.config();
@@ -10,8 +11,10 @@ const app = express();
 app.use(cors());
 app.use(compression());
 app.use(express.json());
+
 app.use("/uploads", express.static("uploads"));
 
+app.use("/api/channel", channelRouter);
 app.use("/api/user", userRouter);
 
 
