@@ -29,7 +29,7 @@ export const userLogin = asyncHandler( async (req, res) => {
 // get user dat logic
 
 export const userData = async (req, res) => {
-    const user  = await getUser(req.user.email);
+    const user  = await getUser(req.payload.email);
     if (!user) return res.status(400).json(badResponse("User not found"));
     res.json(userSuccessResonse("user fetched success", user));
 }
@@ -37,7 +37,7 @@ export const userData = async (req, res) => {
 // refresh tokens
 
 export const refresh = (req, res) => {  
-    res.json(loginResponse("token refreshed success", createAllTokens(req.user.email)));
+    res.json(loginResponse("token refreshed success", createAllTokens(req.payload.email)));
 }
 
 
@@ -45,7 +45,7 @@ export const refresh = (req, res) => {
 
 export const avatarUpload = (req, res)=>{
     const fileUrl = `${req.protocol}://${req.get("host")}/uploads/avatar/${req.file.filename}`;
-    const result = updateAvatar(fileUrl, req.user.email);
+    const result = updateAvatar(fileUrl, req.payload.email);
     res.json({
         success: true,
         url: fileUrl
