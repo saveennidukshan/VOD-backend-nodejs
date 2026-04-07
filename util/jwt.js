@@ -10,3 +10,17 @@ export const createAuthToken = (payload) => {
     return "Bearer " + jwt.sign(payload, process.env.JWT_SECRET, {expiresIn: 60*15})
 }
 
+
+export const createAllTokens= (email) => {
+    return {
+        rftoken : createRfToken({email}),
+        authtoken : createAuthToken({email})
+    }
+    
+}
+
+
+
+
+
+
