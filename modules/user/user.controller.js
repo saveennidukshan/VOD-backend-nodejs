@@ -1,6 +1,6 @@
 import { badResponse, loginResponse, userSuccessResonse } from "../../helpers/responses.js";
 import { compareHash, createHash } from "../../util/hash.js";
-import { createAllTokens, createAuthToken, createRfToken } from "../../util/jwt.js";
+import { createAllTokens } from "../../util/jwt.js";
 import { createUser, getUser, getUserPassword, updateAvatar } from "./user.model.js";
 import asyncHandler from "express-async-handler";
 
