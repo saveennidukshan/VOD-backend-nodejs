@@ -1,6 +1,6 @@
 import express from "express";
-import { signUp, login, refresh } from "./auth.controller";
-import { verifyRefreshToken } from "../../middleware/verifytoken";
+import { signUp, login, refresh } from "./auth.controller.js";
+import { verifyRefreshToken } from "../../middleware/verifytoken.js";
 
 
 const router = express.Router();

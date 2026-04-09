@@ -2,7 +2,6 @@ import express from "express";
 import env from "dotenv";
 import cors from "cors";
 import userRouter from "./modules/user/user.routes.js"
-import channelRouter from "./modules/channel/channel.routes.js"
 import authRouter from "./modules/auth/auth.routes.js"
 import compression from "compression";
 
@@ -16,8 +15,7 @@ app.use(express.json());
 
 app.use("/uploads", express.static("uploads"));
 
-app.use("/api/v1/auth", authRouter)
-app.use("/api/v1/channel", channelRouter);
+app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/user", userRouter);
 
 
