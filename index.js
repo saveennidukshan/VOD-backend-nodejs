@@ -6,6 +6,8 @@ import authRouter from "./modules/auth/auth.routes.js"
 import compression from "compression";
 
 
+
+
 env.config();
 
 const app = express();
@@ -17,6 +19,9 @@ app.use("/uploads", express.static("uploads"));
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/user", userRouter);
+
+
+
 
 
 app.listen(process.env.APP_Port || 3000,()=>{

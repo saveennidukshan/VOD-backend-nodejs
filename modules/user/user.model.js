@@ -68,3 +68,12 @@ export const updateAvatar = async (avatar, email) => {
         return null;
     }
 }
+
+export const updatePassword = async (email, password) => {
+    try{
+        const data = await db.query("UPDATE user SET password = ? WHERE email = ?",[password, email]);
+        return data[0];
+    }catch{
+        return null;
+    }
+}
