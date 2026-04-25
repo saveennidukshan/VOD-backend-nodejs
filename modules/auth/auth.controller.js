@@ -9,7 +9,7 @@ import asyncHandler from "express-async-handler";
 
 
 export const signUp = asyncHandler( async (req, res) => {
-    if(!(req.body && req.body.email && req.body.password)) return res.status(400).json(badResponse("email or password not found"));
+    
     const user = await getUser(req.body.email);
     if (user) return res.status(400).json(badResponse("User alredy registerd"));
     const addedUser = await createUser(req.body.email, await createHash(req.body.password));
@@ -39,7 +39,6 @@ export const resetPassword = async (req, res) => {
 }
 
 export const forgetPassword = async (req, res) => {
-    if(!(req.body && req.body.email)) return res.status(400).json(badResponse("Email not found"));
     const user = await getUser(req.body.email);
     if (!user) return res.status(400).json(badResponse("User not found"));
     const data = await genHMAC(req.body.email);
