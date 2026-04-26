@@ -14,7 +14,7 @@ try{
     transport.verify();
     console.log("email server working")
 }catch(e){
-    console.log("email error")
+    console.log("email server error")
 }
 
 

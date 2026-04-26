@@ -1,4 +1,4 @@
-import { badResponse, loginResponse, userSuccessResonse } from "../../helpers/responses.js";
+import { BadResponse, SuccessResponse, TokenResponse } from "../../helpers/responses.js";
 import { sendMail } from "../../helpers/sendMail.js";
 import { compareHash, createHash } from "../../util/hash.js";
 import { genHMAC } from "../../util/hmac.js";
@@ -7,43 +7,44 @@ import { createUser, getUser, getUserPassword, updatePassword} from "./../user/u
 import asyncHandler from "express-async-handler";
 
 
-
 export const signUp = asyncHandler( async (req, res) => {
-    
-    const user = await getUser(req.body.email);
-    if (user) return res.status(400).json(badResponse("User alredy registerd"));
-    const addedUser = await createUser(req.body.email, await createHash(req.body.password));
-    if (addedUser) return res.status(201).json(userSuccessResonse("User created success", await getUser(req.body.email)));
+    const {email, password} = req.body;
+    const user = await getUser(email);
+    if (user) return new BadResponse("User alredy registered").send(res, 400);
+    const addedUser = await createUser(email, await createHash(password));
+    if (addedUser) return new SuccessResponse("User created success").send(res, 201);
 });
 
 
 export const login = asyncHandler( async (req, res) => {
-    if(!(req.body && req.body.email && req.body.password)) return res.status(400).json(badResponse("email or password not found"))
-    const user = await getUser(req.body.email);
-    if (!user) return res.status(400).json(badResponse("User not found"));
-    const password = await getUserPassword(user.email);
-    if(!(await compareHash(req.body.password, password))) return res.json(badResponse("Wrong credentials"));
-    res.json(loginResponse("user logged success", createAllTokens(user.email)));
+    const {email, password} = req.body;
+    const user = await getUser(email);
+    if (!user) return new BadResponse("User not found").send(res, 404);
+    const HashedPassword = await getUserPassword(user.email);
+    if(!(await compareHash(password, HashedPassword))) return new BadResponse("Wrong credentials").send(res, 400);
+    new TokenResponse("user logged success", createAllTokens(user.email)).send(res);
 });
 
 
 export const refresh = (req, res) => {  
-    res.json(loginResponse("token refreshed success", createAllTokens(req.payload.email)));
+    new TokenResponse("Tokens refreshed", createAllTokens(user.email)).send(res);
 }
 
 export const resetPassword = async (req, res) => {
-    const hashedPasword = await createHash(req.body.password);
-    const result = await updatePassword(req.body.email, hashedPasword);
-    if(!result) return res.json(badResponse("Password change failed"));
-    res.json(userSuccessResonse("Password changed"));
+    const {email, password} = req.body;
+    const hashedPasword = await createHash(password);
+    const result = await updatePassword(email, hashedPasword);
+    if(!result) return new BadResponse("Password change failed").send(res, 400);
+    new SuccessResponse("User password changed").send(res);
 }
 
 export const forgetPassword = async (req, res) => {
-    const user = await getUser(req.body.email);
-    if (!user) return res.status(400).json(badResponse("User not found"));
-    const data = await genHMAC(req.body.email);
+    const {email} = req.body;
+    const user = await getUser(email);
+    if (!user) return new BadResponse("User not found").send(res, 404);
+    const data = await genHMAC(email);
     const mailStatus = await sendMail(data);
-    if(!mailStatus) return res.status(400).json(badResponse("Server error"));
-    res.json(userSuccessResonse("Verfication send to the email"));
+    if(!mailStatus) return new BadResponse("Email not send").send(res, 400);
+    new SuccessResponse("Verfication send to the email").send(res);
 
 }
