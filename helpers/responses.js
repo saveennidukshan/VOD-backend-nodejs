@@ -8,6 +8,7 @@ export class BaseResponse{
     }
 }
 
+
 export class SuccessResponse extends BaseResponse{
     constructor(message){
        super(message, true);      
@@ -27,7 +28,7 @@ export class TokenResponse extends SuccessResponse{
     }
 }
 
-export class UserDataResponse extends SuccessResponse{
+export class DataResponse extends SuccessResponse{
     constructor(message, data){
         super(message);
         this.data = data;
@@ -40,3 +41,4 @@ export class AvatarUploadResponse extends SuccessResponse{
         this.url = url;
     }
 }
+

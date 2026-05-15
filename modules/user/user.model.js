@@ -32,7 +32,7 @@ export const updateUser = async (email, password, avatar) => {
 
 export const getUser = async (email) => {
     try{
-        const data = await db.query("SELECT email, avatar, created_at, updated_at FROM user WHERE email = ?",[email]);
+        const data = await db.query("SELECT u.email, u.avatar, u.created_at, u.updated_at, s.sub_id, s.sub_name FROM user u join subscription s on u.sub_id = s.sub_id WHERE u.email = ?",[email]);
         return data[0][0];
     }catch{
         return null;
