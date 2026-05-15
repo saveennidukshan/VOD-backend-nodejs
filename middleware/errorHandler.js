@@ -1,6 +1,8 @@
-import { BadResponse } from "../helpers/responses";
+import { BadResponse } from "../helpers/responses.js";
 
-export default errorhandler = (err, req, res, next) => {
+const errorhandler = (err, req, res, next) => {
     new BadResponse("Internal Server Error").send(res, 500);
 }
 
+
+export default errorhandler;

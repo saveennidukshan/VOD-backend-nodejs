@@ -9,7 +9,7 @@ import asyncHandler from "express-async-handler";
 
 export const signUp = asyncHandler( async (req, res) => {
     const {email, password} = req.body;
-    const user = await getUser(email);
+    const user = await getUserPassword(email);
     if (user) return new BadResponse("User alredy registered").send(res, 400);
     const addedUser = await createUser(email, await createHash(password));
     if (addedUser) return new SuccessResponse("User created success").send(res, 201);
@@ -18,11 +18,10 @@ export const signUp = asyncHandler( async (req, res) => {
 
 export const login = asyncHandler( async (req, res) => {
     const {email, password} = req.body;
-    const user = await getUser(email);
-    if (!user) return new BadResponse("User not found").send(res, 404);
-    const HashedPassword = await getUserPassword(user.email);
-    if(!(await compareHash(password, HashedPassword))) return new BadResponse("Wrong credentials").send(res, 400);
-    new TokenResponse("user logged success", createAllTokens(user.email)).send(res);
+    const userPass = await getUserPassword(email);
+    if (!userPass) return new BadResponse("user not found").send(res, 404);
+    if(!(await compareHash(password, userPass))) return new BadResponse("wrong credentials").send(res, 400);
+    return new TokenResponse("user logged success", createAllTokens(email)).send(res);
 });
 
 
