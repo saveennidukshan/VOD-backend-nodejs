@@ -5,7 +5,7 @@ import { getUser, updateAvatar } from "./user.model.js";
 export const userData = async (req, res) => {
     const user  = await getUser(req.payload.email);
     if (!user) return new BadResponse("User not found").send(res, 400);
-    return new DataResponse("User found", user).send(res, 302);
+    return new DataResponse("User fetched success", user).send(res);
 }
 
 export const avatarUpload = (req, res)=>{

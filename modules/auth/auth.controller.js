@@ -3,7 +3,7 @@ import { sendMail } from "../../helpers/sendMail.js";
 import { compareHash, createHash } from "../../util/hash.js";
 import { genHMAC } from "../../util/hmac.js";
 import { createAllTokens } from "../../util/jwt.js";
-import { createUser, getUser, getUserPassword, updatePassword} from "./../user/user.model.js";
+import { createUser, getUser, getUserPassword, updateLoginTime, updatePassword} from "./../user/user.model.js";
 import asyncHandler from "express-async-handler";
 
 
@@ -21,12 +21,13 @@ export const login = asyncHandler( async (req, res) => {
     const userPass = await getUserPassword(email);
     if (!userPass) return new BadResponse("user not found").send(res, 404);
     if(!(await compareHash(password, userPass))) return new BadResponse("wrong credentials").send(res, 400);
+    await updateLoginTime(email);
     return new TokenResponse("user logged success", createAllTokens(email)).send(res);
 });
 
 
-export const refresh = (req, res) => {  
-    new TokenResponse("Tokens refreshed", createAllTokens(user.email)).send(res);
+export const refresh = (req, res) => {
+    new TokenResponse("Tokens refreshed", createAllTokens(req.payload.email)).send(res);
 }
 
 export const resetPassword = async (req, res) => {

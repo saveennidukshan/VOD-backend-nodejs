@@ -32,7 +32,7 @@ export const updateUser = async (email, password, avatar) => {
 
 export const getUser = async (email) => {
     try{
-        const data = await db.query("SELECT u.email, u.avatar, u.created_at, u.updated_at, s.sub_id, s.sub_name FROM user u join subscription s on u.sub_id = s.sub_id WHERE u.email = ?",[email]);
+        const data = await db.query("SELECT u.email, u.avatar, u.created_at, u.updated_at, last_login, s.sub_id, s.sub_type FROM user u join subscription s on u.sub_id = s.sub_id WHERE u.email = ?",[email]);
         return data[0][0];
     }catch{
         return null;
@@ -75,5 +75,14 @@ export const updatePassword = async (email, password) => {
         return data[0];
     }catch{
         return null;
+    }
+}
+
+export const updateLoginTime = async (email) => {
+    try{
+        await db.query("UPDATE user SET last_login = now() WHERE email = ?", [email])
+        return true;
+    }catch{
+        return false;
     }
 }
