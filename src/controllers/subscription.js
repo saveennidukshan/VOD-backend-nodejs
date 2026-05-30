@@ -1,5 +1,5 @@
-import { BadResponse, DataResponse } from "../../helpers/responses.js"
-import { allSubscriptions } from "./subscription.model.js"
+import { BadResponse, DataResponse } from "../helpers/responses.js"
+import { allSubscriptions } from "../models/subscription.js"
 
 
 export const getAllSubscriptions = async (req, res) => {

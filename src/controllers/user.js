@@ -1,5 +1,5 @@
-import { AvatarUploadResponse, BadResponse, DataResponse } from "../../helpers/responses.js";
-import { getUser, updateAvatar } from "./user.model.js";
+import { AvatarUploadResponse, BadResponse, DataResponse } from "../helpers/responses.js";
+import { getUser, updateAvatar } from "../models/user.js";
 
 
 export const userData = async (req, res) => {

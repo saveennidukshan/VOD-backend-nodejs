@@ -1,9 +1,9 @@
-import { BadResponse, SuccessResponse, TokenResponse } from "../../helpers/responses.js";
-import { sendMail } from "../../helpers/sendMail.js";
-import { compareHash, createHash } from "../../util/hash.js";
-import { genHMAC } from "../../util/hmac.js";
-import { createAllTokens } from "../../util/jwt.js";
-import { createUser, getUser, getUserPassword, updateLoginTime, updatePassword} from "./../user/user.model.js";
+import { BadResponse, SuccessResponse, TokenResponse } from "../helpers/responses.js";
+import { sendMail } from "../helpers/sendMail.js";
+import { compareHash, createHash } from "../utils/hash.js";
+import { genHMAC } from "../utils/hmac.js";
+import { createAllTokens } from "../utils/jwt.js";
+import { createUser, getUser, getUserPassword, updateLoginTime, updatePassword} from "../models/user.js";
 import asyncHandler from "express-async-handler";
 
 

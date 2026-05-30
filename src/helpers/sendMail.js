@@ -1,4 +1,4 @@
-import transport from "../config/mail.js";
+import transport from "../configs/mail.js";
 
 export const sendMail = async (data) => {
     try {

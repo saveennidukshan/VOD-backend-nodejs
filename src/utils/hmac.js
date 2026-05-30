@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getUserPassword } from '../modules/user/user.model.js';
+import { getUserPassword } from '../models/user.js';
 
 export const genHMAC = async (email) => {
     const ts = Date.now();

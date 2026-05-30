@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllSubscriptions } from "./subscription.controller.js";
+import { getAllSubscriptions } from "../controllers/subscription.js";
 
 const router = Router();
 
