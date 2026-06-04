@@ -3,7 +3,7 @@ import env from "dotenv";
 import cors from "cors";
 import compression from "compression";
 import errorHandler from "./src/middlewares/errorHandler.js";
-import router from "./src/routes/index.js"
+import authRouter from "./src/modules/auth/auth.routes.js"
 
 env.config();
 
@@ -13,7 +13,7 @@ app.use(compression());
 app.use(express.json());
 
 app.use("/uploads", express.static("uploads"));
-app.use("/api/v1", router);
+app.use("/api/v1/auth", authRouter);
 app.use(errorHandler);
 
 export default app;
