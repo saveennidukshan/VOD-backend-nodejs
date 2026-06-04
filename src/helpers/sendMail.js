@@ -1,16 +1,16 @@
-import transport from "../configs/mail.js";
+import transport from '../configs/mail.js';
 
 export const sendMail = async (data) => {
-    try {
-        const info = await transport.sendMail({
-            from:`no-reply@${process.env.APP_NAME}`,
-            to: data.email, 
-            subject: "Reset Password", 
-            text: `Hello,
+  try {
+    await transport.sendMail({
+      from: `no-reply@${process.env.APP_NAME}`,
+      to: data.email,
+      subject: 'Reset Password',
+      text: `Hello,
                     You requested a password reset.
                     Use this link: ${process.env.FRONTEND_PW_RESET_URL}?email=${data.email}&ts=${data.ts}&token=${data.hmac}
                     This link expires in 15 minutes.`,
-            html: `<!DOCTYPE html>
+      html: `<!DOCTYPE html>
                     <html>
                     <body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial, sans-serif;">
 
@@ -52,11 +52,10 @@ export const sendMail = async (data) => {
 
                     </body>
                     </html>
-                    `
-        });
-        return true;
-    } catch (err) {
-        return false;
-    }
-}
-
+                    `,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
