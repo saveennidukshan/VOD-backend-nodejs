@@ -10,11 +10,4 @@ const transport = nodemailer.createTransport({
   },
 });
 
-try {
-  transport.verify();
-  console.log('email server working');
-} catch {
-  console.log('email server error');
-}
-
 export default transport;

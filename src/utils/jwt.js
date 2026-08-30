@@ -1,18 +1,44 @@
 import jwt from 'jsonwebtoken';
+import authConfig from '../configs/auth.config.js';
 
-export const createRfToken = (payload) => {
-  payload.type = 'refresh';
-  return 'Bearer ' + jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: 60 * 60 * 24 * 30 });
+const durationUnits = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
 };
 
-export const createAuthToken = (payload) => {
-  payload.type = 'auth';
-  return 'Bearer ' + jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: 60 * 15 });
+export const parseDurationMs = (value) => {
+  if (typeof value === 'number') return value * 1000;
+  if (!value) return 0;
+  const match = String(value).trim().match(/^(\d+)([smhd])$/i);
+  if (!match) {
+    const asSeconds = Number(value);
+    return Number.isFinite(asSeconds) ? asSeconds * 1000 : 0;
+  }
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  return amount * durationUnits[unit];
 };
 
-export const createAllTokens = (email) => {
-  return {
-    rftoken: createRfToken({ email }),
-    authtoken: createAuthToken({ email }),
-  };
+export const signAccessToken = (payload) => {
+  return jwt.sign(payload, authConfig.jwtAccessSecret, {
+    expiresIn: authConfig.accessTokenExpiresIn,
+  });
 };
+
+export const signRefreshToken = (payload) => {
+  return jwt.sign(payload, authConfig.jwtRefreshSecret, {
+    expiresIn: authConfig.refreshTokenExpiresIn,
+  });
+};
+
+export const signActionToken = (payload, expiresIn) => {
+  return jwt.sign(payload, authConfig.tokenActionSecret, {
+    expiresIn,
+  });
+};
+
+export const verifyAccessToken = (token) => jwt.verify(token, authConfig.jwtAccessSecret);
+export const verifyRefreshToken = (token) => jwt.verify(token, authConfig.jwtRefreshSecret);
+export const verifyActionToken = (token) => jwt.verify(token, authConfig.tokenActionSecret);
