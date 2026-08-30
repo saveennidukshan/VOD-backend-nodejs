@@ -2,140 +2,191 @@
 
 Backend for a Video On Demand (VOD) platform built with Node.js.
 
-## Table of Contents
+## Authentication module
 
-- [About](#about)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Running the app](#running-the-app)
-- [Development scripts](#development-scripts)
-- [API](#api)
-- [Testing](#testing)
-- [Deployment notes](#deployment-notes)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+The repository now includes a production-oriented auth module under:
 
-## About
+- `src/modules/auth/`
+  - `auth.controller.js`
+  - `auth.service.js`
+  - `auth.routes.js`
+  - `auth.validation.js`
+  - `auth.tokens.js`
+  - `auth.model.js`
+  - `auth.token.model.js`
+- `src/modules/users/`
+  - `user.model.js`
+  - `user.service.js`
+- `src/middlewares/`
+  - `auth.middleware.js`
+  - `errorHandler.js`
+  - `rateLimit.middleware.js`
+- `src/utils/`
+  - `crypto.js`
+  - `jwt.js`
+  - `email.js`
 
-This repository contains the backend services for a Video On Demand platform implemented in Node.js. It provides APIs for user management, video catalog, streaming metadata, and related operations.
+## Security decisions
 
-## Features
+- Password hashing with `bcryptjs` (`BCRYPT_SALT_ROUNDS` configurable).
+- Access + refresh JWT with separate secrets and expirations.
+- Refresh token rotation with token-family invalidation on reuse detection.
+- Refresh tokens stored as HMAC hashes (never plaintext).
+- HTTP-only refresh cookie + SameSite + Secure controls.
+- CSRF check for cookie refresh flow using double-submit token header (`x-csrf-token`).
+- Validation for all auth endpoints with Joi.
+- Account lockout + progressive delay for failed logins.
+- Rate limiting for login/reset endpoints.
+- Reset and email verification via signed, expiring, one-time tokens.
+- Helmet enabled and credential-safe CORS config.
+- Audit-style auth event logs without logging secrets.
 
-- RESTful APIs for users, videos, categories, and playback metadata
-- Authentication and authorization (JWT or session-based - adjust as implemented)
-- Database integration (configure via environment variables)
-- File/video upload endpoints (if present in the implementation)
+## Required environment variables
 
-## Tech Stack
+Use secure values in production:
 
-- Language: JavaScript (Node.js)
-- Web framework: Express (or the framework used in this project)
-- Database: (configure; e.g., PostgreSQL, MongoDB)
-
-## Prerequisites
-
-- Node.js >= 16
-- npm or yarn
-- A running database instance (Postgres, MongoDB, etc.) if required
-
-## Installation
-
-1. Clone the repository
-
-   git clone https://github.com/saveennidukshan/VOD-backend-nodejs.git
-   cd VOD-backend-nodejs
-
-2. Install dependencies
-
-   npm install
-   # or
-   yarn install
-
-## Configuration
-
-Create a `.env` file in the project root (or set environment variables) with values similar to:
-
-```
-PORT=3000
+```env
+APP_Port=3000
 NODE_ENV=development
-DATABASE_URL=postgres://user:password@host:5432/dbname
-JWT_SECRET=your_jwt_secret
-# Add any other variables your project requires (e.g., storage credentials, third-party API keys)
+
+JWT_ACCESS_SECRET=change_me_access
+JWT_REFRESH_SECRET=change_me_refresh
+JWT_ACTION_SECRET=change_me_action
+ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+EMAIL_VERIFY_TOKEN_EXPIRES_IN=24h
+RESET_TOKEN_EXPIRES_IN=15m
+BCRYPT_SALT_ROUNDS=12
+
+FRONTEND_ORIGIN=http://localhost:3000
+COOKIE_SECURE=false
+COOKIE_SAMESITE=strict
+REFRESH_TOKEN_COOKIE_NAME=refreshToken
+CSRF_COOKIE_NAME=csrfToken
+
+REQUIRE_EMAIL_VERIFICATION=false
+AUTH_LOCK_THRESHOLD=5
+AUTH_LOCK_MINUTES=15
+AUTH_PROGRESSIVE_DELAY_MS=250
+LOGIN_RATE_LIMIT_WINDOW_MS=900000
+LOGIN_RATE_LIMIT_MAX=10
+RESET_RATE_LIMIT_WINDOW_MS=900000
+RESET_RATE_LIMIT_MAX=5
+REFRESH_TOKEN_HASH_SECRET=change_me_hash_secret
+
+# Optional DB mode (MySQL). If omitted, in-memory storage is used.
+DB_HOST=
+DB_PORT=3306
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
+
+# Optional email
+EMAIL_USER=
+EMAIL_PASS=
+APP_NAME=vod-platform
 ```
 
-Make sure to update the values according to your environment.
+## Auth endpoints
 
-## Running the app
+Base path: `/api/v1/auth`
 
-Start the server in development mode:
+- `POST /register`
+- `POST /signup` (backward-compatible alias)
+- `POST /login`
+- `POST /logout`
+- `POST /refresh-token`
+- `GET /me`
+- `POST /forgot-password`
+- `POST /reset-password`
+- `POST /change-password`
+- `POST /verify-email`
+- `POST /resend-verification-email`
+- `GET /protected-sample` (example protected route)
 
+## Example flow (register/login/refresh/logout)
+
+1. **Register**: `POST /auth/register` with email/password.
+   - Returns access token in JSON.
+   - Sets refresh token cookie (`HttpOnly`) and CSRF cookie.
+2. **Call protected APIs** with an Authorization header containing the access token.
+3. **Refresh**: `POST /auth/refresh-token`
+   - For cookie flow, send `x-csrf-token` header with CSRF cookie value.
+   - Returns new access token and rotates refresh token.
+4. **Logout**: `POST /auth/logout` to revoke refresh token and clear cookies.
+
+## Request/response examples
+
+### Register
+
+```http
+POST /api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "StrongPass@1234"
+}
 ```
+
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "...",
+      "email": "user@example.com",
+      "role": "user",
+      "isEmailVerified": false
+    },
+    "accessToken": "..."
+  }
+}
+```
+
+### Login
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "StrongPass@1234"
+}
+```
+
+### Refresh token
+
+```http
+POST /api/v1/auth/refresh-token
+x-csrf-token: <csrf cookie value>
+```
+
+### Current user
+
+```http
+GET /api/v1/auth/me
+Authorization: ******
+```
+
+## Local setup
+
+```bash
+npm install
+npm run lint
+npm test -- --runInBand tests/auth.test.js
 npm run dev
-# or
-node index.js
 ```
 
-Replace `index.js` with the project's entrypoint if different.
+## Testing coverage added
 
-## Development scripts
+`tests/auth.test.js` validates:
 
-Common npm scripts you may find or add to package.json:
-
-- `npm start` - start the app in production mode
-- `npm run dev` - start the app with live-reload (e.g., nodemon)
-- `npm test` - run tests
-- `npm run lint` - run linters
-
-## API
-
-Document the main API endpoints here (examples):
-
-- `POST /api/auth/register` - register a new user
-- `POST /api/auth/login` - login and receive token
-- `GET /api/videos` - list videos
-- `GET /api/videos/:id` - get video details
-- `POST /api/videos` - create a new video (admin/uploader)
-
-Add full API docs or link to a Swagger/OpenAPI spec if available.
-
-## Testing
-
-If tests exist, run:
-
-```
-npm test
-```
-
-Add details about test setup and coverage reporting if applicable.
-
-## Deployment notes
-
-- Build step (if any) and environment-specific configuration
-- Use a process manager (PM2, systemd) or containerization (Docker)
-- Configure reverse proxy and SSL (Nginx, Cloud Load Balancer)
-- Consider using a CDN for video assets and signed URLs for secure playback
-
-## Contributing
-
-Contributions are welcome. Please open issues for bugs or feature requests and submit pull requests for changes.
-
-Suggested workflow:
-
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Commit your changes and push
-4. Open a pull request describing the changes
-
-## License
-
-This project does not specify a license. Add a LICENSE file (for example, MIT) if you want to make the licensing explicit.
-
-## Contact
-
-Maintainer: saveennidukshan
-
-For questions or support, open an issue in this repository.
+- Register + `/me` happy path
+- Invalid credentials
+- Invalid access token
+- Account lockout behavior
+- Refresh token reuse detection
+- Reset token expiry

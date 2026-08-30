@@ -1,5 +1,10 @@
 import crypto from 'crypto';
-import { getUserPassword } from '../models/user.js';
+import { findUserByEmail } from '../modules/users/user.service.js';
+
+const getUserPassword = async (email) => {
+  const user = await findUserByEmail(String(email || '').toLowerCase());
+  return user?.passwordHash || '';
+};
 
 export const genHMAC = async (email) => {
   const ts = Date.now();

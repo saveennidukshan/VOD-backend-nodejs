@@ -1,11 +1,21 @@
-import { BadResponse } from '../helpers/responses.js';
+import { AppError } from '../utils/errors.js';
 
 const validator = (schema) => (req, res, next) => {
-  const { error } = schema.validate(req.body);
+  const { error, value } = schema.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+
   if (error) {
-    return new BadResponse('wrong credentials').send(res, 400);
+    return next(
+      new AppError('Validation failed', 400, {
+        errors: error.details.map((item) => item.message),
+      })
+    );
   }
-  next();
+
+  req.body = value;
+  return next();
 };
 
 export default validator;

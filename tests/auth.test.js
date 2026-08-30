@@ -1,104 +1,137 @@
+import { beforeEach, describe, expect, test } from '@jest/globals';
 import request from 'supertest';
 import app from '../app.js';
-import { afterAll, expect } from '@jest/globals';
-import db from '../config/db.js';
+import { clearRateLimitBucketsForTests } from '../src/middlewares/rateLimit.middleware.js';
+import { resetInMemoryStore } from '../src/models/inMemoryStore.js';
+import { findUserByEmail, updateUser } from '../src/modules/users/user.service.js';
+import { hashToken } from '../src/utils/crypto.js';
+import { signActionToken } from '../src/utils/jwt.js';
+
+const authBase = '/api/v1/auth';
+
+const uniqueEmail = () => `vod_${Date.now()}_${Math.floor(Math.random() * 1000)}@example.com`;
+
+const extractCookieValue = (setCookie, name) => {
+  const target = (setCookie || []).find((entry) => entry.startsWith(`${name}=`));
+  if (!target) return null;
+  return target.split(';')[0].split('=')[1];
+};
 
 describe('Auth Module', () => {
-  const email = 'vod_test@gmail.com';
-  const password = 'VOdtest@123';
-
-  afterAll(async () => {
-    await db.query('DELETE FROM user WHERE email = ?', [email]);
-
-    await db.end();
+  beforeEach(() => {
+    resetInMemoryStore();
+    clearRateLimitBucketsForTests();
   });
 
-  test('POST /api/v1/auth/signup request_without_json_data', async () => {
-    const response = await request(app).post('/api/v1/auth/signup').send();
+  test('register + me returns authenticated user', async () => {
+    const email = uniqueEmail();
+    const password = 'StrongPass@1234';
 
-    expect(response.statusCode).toBe(500);
+    const registerResponse = await request(app).post(`${authBase}/register`).send({ email, password });
 
-    expect(response.body.success).toBe(false);
+    expect(registerResponse.statusCode).toBe(201);
+    expect(registerResponse.body.success).toBe(true);
+    expect(registerResponse.body.data.accessToken).toBeTruthy();
 
-    expect(response.body.message).toBe('Internal Server Error');
+    const meResponse = await request(app)
+      .get(`${authBase}/me`)
+      .set('Authorization', 'Bearer ' + registerResponse.body.data.accessToken);
+
+    expect(meResponse.statusCode).toBe(200);
+    expect(meResponse.body.data.user.email).toBe(email.toLowerCase());
   });
 
-  test('POST /api/v1/auth/signup calling_endpoint_with_manipulated_data', async () => {
-    const response = await request(app).post('/api/v1/auth/signup').send({
+  test('login fails with invalid credentials', async () => {
+    const email = uniqueEmail();
+    const password = 'StrongPass@1234';
+
+    await request(app).post(`${authBase}/register`).send({ email, password });
+
+    const response = await request(app).post(`${authBase}/login`).send({
       email,
-      password,
-      subscription: 'Pro',
+      password: 'WrongPass@1234',
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.body.success).toBe(false);
+  });
+
+  test(
+    'locked account blocks login after repeated failures',
+    async () => {
+    const email = uniqueEmail();
+    const password = 'StrongPass@1234';
+
+    await request(app).post(`${authBase}/register`).send({ email, password });
+
+    for (let i = 0; i < 5; i += 1) {
+      await request(app).post(`${authBase}/login`).send({ email, password: 'WrongPass@1234' });
+    }
+
+    const response = await request(app).post(`${authBase}/login`).send({ email, password });
+    expect(response.statusCode).toBe(423);
+    },
+    15000
+  );
+
+  test('invalid access token is rejected on protected endpoint', async () => {
+    const response = await request(app).get(`${authBase}/me`).set('Authorization', '******');
+
+    expect(response.statusCode).toBe(401);
+    expect(response.body.success).toBe(false);
+  });
+
+  test('refresh token rotation detects reuse', async () => {
+    const email = uniqueEmail();
+    const password = 'StrongPass@1234';
+    const agent = request.agent(app);
+
+    const registerResponse = await agent.post(`${authBase}/register`).send({ email, password });
+    const firstRefreshToken = extractCookieValue(registerResponse.headers['set-cookie'], 'refreshToken');
+    const firstCsrfToken = extractCookieValue(registerResponse.headers['set-cookie'], 'csrfToken');
+
+    const refreshResponse = await agent
+      .post(`${authBase}/refresh-token`)
+      .set('x-csrf-token', firstCsrfToken)
+      .send({});
+
+    expect(refreshResponse.statusCode).toBe(200);
+
+    const reuseResponse = await request(app).post(`${authBase}/refresh-token`).send({
+      refreshToken: firstRefreshToken,
+    });
+
+    expect(reuseResponse.statusCode).toBe(401);
+
+    const secondCsrfToken = extractCookieValue(refreshResponse.headers['set-cookie'], 'csrfToken') || firstCsrfToken;
+    const revokedFamilyResponse = await agent
+      .post(`${authBase}/refresh-token`)
+      .set('x-csrf-token', secondCsrfToken)
+      .send({});
+
+    expect(revokedFamilyResponse.statusCode).toBe(401);
+  });
+
+  test('expired reset token is rejected', async () => {
+    const email = uniqueEmail();
+    const password = 'StrongPass@1234';
+
+    await request(app).post(`${authBase}/register`).send({ email, password });
+
+    const user = await findUserByEmail(email.toLowerCase());
+    const token = signActionToken({ sub: user.id, purpose: 'reset_password', tokenVersion: user.tokenVersion }, '10m');
+
+    await updateUser(user.id, {
+      resetPasswordTokenHash: hashToken(token),
+      resetPasswordExpiresAt: new Date(Date.now() - 1000),
+    });
+
+    const response = await request(app).post(`${authBase}/reset-password`).send({
+      token,
+      newPassword: 'NewStrongPass@1234',
     });
 
     expect(response.statusCode).toBe(400);
-
     expect(response.body.success).toBe(false);
-
-    expect(response.body.message).toBe('wrong credentials');
-  });
-
-  test('POST /api/v1/auth/login request_without_user', async () => {
-    const response = await request(app).post('/api/v1/auth/login').send({
-      email,
-      password,
-    });
-
-    expect(response.statusCode).toBe(404);
-
-    expect(response.body.success).toBe(false);
-
-    expect(response.body.message).toBe('user not found');
-  });
-
-  test('POST /api/v1/auth/signup adding_user', async () => {
-    const response = await request(app).post('/api/v1/auth/signup').send({
-      email,
-      password,
-    });
-
-    expect(response.statusCode).toBe(201);
-
-    expect(response.body.success).toBe(true);
-
-    expect(response.body.message).toBe('User created success');
-  });
-
-  test('POST /api/v1/auth/signup adding_user_with_same_data', async () => {
-    const response = await request(app).post('/api/v1/auth/signup').send({
-      email,
-      password,
-    });
-
-    expect(response.statusCode).toBe(400);
-
-    expect(response.body.success).toBe(false);
-
-    expect(response.body.message).toBe('User alredy registered');
-  });
-
-  test('POST /api/v1/auth/login log_with_incorrect_credentials', async () => {
-    const response = await request(app).post('/api/v1/auth/login').send({
-      email,
-      password: 'wrongpass',
-    });
-
-    expect(response.statusCode).toBe(400);
-
-    expect(response.body.success).toBe(false);
-
-    expect(response.body.message).toBe('wrong credentials');
-  });
-
-  test('POST /api/v1/auth/login log_with_correct_credentials', async () => {
-    const response = await request(app).post('/api/v1/auth/login').send({
-      email,
-      password,
-    });
-
-    expect(response.statusCode).toBe(200);
-
-    expect(response.body.success).toBe(true);
-
-    expect(response.body.message).toBe('user logged success');
   });
 });
